@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.1.1 — 2026-08-25
+
+The marketplace review's finding, the regression fixing it caused, and the
+housekeeping around both.
+
+### Fixed
+- Every dynamic `Text` binding renders as `Text.PlainText`. QML's default
+  `AutoText` sniffs a bound string for rich-text markup, so a crafted name in
+  a Yahoo response could parse as markup and initiate resource loads inside
+  the long-lived shell process — the finding HANCORE-linux raised on the
+  marketplace submission. The name tooltip moves to a `PlainToolTip` clone of
+  the shell's own component for the same reason, and `tests/test_plaintext.js`
+  fails the build on the next label added without it.
+- The panel header says "Pulse" again. That pass inserted its lines
+  mechanically after each `text:` anchor, and one anchor was the first line of
+  a multiline ternary, so the panel opened under the title "true".
+
+### Changed
+- The panel header's mark wears `Color.accent`, the way the macOS popover
+  draws its waveform in the system accent color. The bar icon stays
+  foreground, mirroring the template menu-bar icon it corresponds to.
+- The `textFormat` lines sit at their block's indentation rather than at
+  column zero, where the same mechanical pass left them.
+- README: a fresh install starts empty, removal is documented, and the panel
+  has a preview image.
+
 ## v0.1.0 — 2026-08-21
 
 First release: the MVP loop — install, watch, add, organize, inspect — is

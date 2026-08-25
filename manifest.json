@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pulse.omarchy",
   "name": "Pulse",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "fatwang2",
   "license": "MIT",
   "description": "Glanceable market data in the Omarchy bar.",
