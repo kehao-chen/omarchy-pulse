@@ -89,7 +89,7 @@ Rectangle {
         id: nameText
         width: Math.min(implicitWidth, parent.width - (pinMark.visible ? Style.space(14) : 0))
         text: root.primaryName
-textFormat: Text.PlainText
+        textFormat: Text.PlainText
         color: root.textColor
         font.family: root.panelFontFamily
         font.pixelSize: Style.font.bodySmall
@@ -137,7 +137,7 @@ textFormat: Text.PlainText
         // The code identifies; the name above may be missing or elided, and
         // an error takes this slot because it is what there is to say.
         text: root.row.error ? root.row.error : root.row.displayCode
-textFormat: Text.PlainText
+        textFormat: Text.PlainText
         color: root.mutedColor
         font.family: root.panelFontFamily
         font.pixelSize: Style.font.caption
@@ -225,7 +225,7 @@ textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         visible: root.sessionLabel !== ""
         text: root.sessionLabel
-textFormat: Text.PlainText
+        textFormat: Text.PlainText
         color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.45)
         font.family: root.panelFontFamily
         font.pixelSize: Style.font.caption
@@ -234,7 +234,7 @@ textFormat: Text.PlainText
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: root.hasQuote ? Model.formatPrice(root.quote.price) : "—"
-textFormat: Text.PlainText
+        textFormat: Text.PlainText
         color: root.textColor
         font.family: root.panelFontFamily
         font.pixelSize: Style.font.bodySmall
@@ -261,7 +261,7 @@ textFormat: Text.PlainText
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: root.hasQuote ? Model.formatPercent(root.row.changePercent) : "—"
-textFormat: Text.PlainText
+        textFormat: Text.PlainText
         color: root.movementColor
         font.family: root.panelFontFamily
         font.pixelSize: Style.font.caption

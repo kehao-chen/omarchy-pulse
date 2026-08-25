@@ -81,7 +81,7 @@ Column {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: parent.label
-textFormat: Text.PlainText
+      textFormat: Text.PlainText
       color: root.mutedColor
       font.family: root.panelFontFamily
       font.pixelSize: Style.font.caption
@@ -90,7 +90,7 @@ textFormat: Text.PlainText
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: parent.value
-textFormat: Text.PlainText
+      textFormat: Text.PlainText
       color: parent.valueColor
       font.family: root.panelFontFamily
       font.pixelSize: Style.font.bodySmall
@@ -111,7 +111,7 @@ textFormat: Text.PlainText
 
       Text {
         text: root.row ? root.row.displayCode : ""
-textFormat: Text.PlainText
+        textFormat: Text.PlainText
         color: root.textColor
         font.family: root.panelFontFamily
         font.pixelSize: Style.font.subtitle
@@ -119,7 +119,7 @@ textFormat: Text.PlainText
       }
       Text {
         text: (root.row && root.row.name) ? String(root.row.name).toUpperCase() : "—"
-textFormat: Text.PlainText
+        textFormat: Text.PlainText
         color: root.mutedColor
         font.family: root.panelFontFamily
         font.pixelSize: Style.font.caption
@@ -134,7 +134,7 @@ textFormat: Text.PlainText
       Text {
         anchors.right: parent.right
         text: root.hasQuote ? Model.formatPrice(root.quote.price) : "—"
-textFormat: Text.PlainText
+        textFormat: Text.PlainText
         color: root.textColor
         font.family: root.panelFontFamily
         font.pixelSize: Style.font.subtitle
