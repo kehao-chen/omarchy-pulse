@@ -38,7 +38,8 @@ var DESCRIPTOR = {
 
 // The TPEx index is the one Yahoo does not spell with a caret: `^TWOII` is a
 // 404, and Yahoo lists it as IX0043.TWO. That symbol carries today's intraday
-// bars but no daily history, so its candle chart holds a single bar.
+// bars but no daily history: its candles are today's one bar, and the candle
+// chart, which needs two, says "No history".
 var INDEX_WIRE = {
   sp500: "^GSPC", nasdaqComposite: "^IXIC", dowJonesIndustrial: "^DJI",
   nasdaq100: "^NDX", vix: "^VIX", russell1000: "^RUI", russell2000: "^RUT",

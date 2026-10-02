@@ -189,7 +189,8 @@ Taiwanese stocks and ETFs (`2330.TW`, `6488.TWO`) and the TAIEX / TPEx indices
 are quoted live from TWSE Market Info, the exchange's own feed, with Yahoo's
 twenty-minute-delayed quote underneath for charts and whenever the exchange has
 no price. Search finds them by code or Chinese name. Yahoo keeps no daily
-history for the TPEx index, so its candle chart holds only today's bar.
+history for the TPEx index, so its D, W and M charts read "No history"; its
+intraday chart works.
 
 Delay is per market and is shown in the quote detail: the US is real time,
 Hong Kong and the Chinese boards about fifteen minutes, Tokyo, Seoul and Taipei
