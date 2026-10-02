@@ -39,6 +39,14 @@ from a provider's search index, so it never needs to check one. Here the
 watchlist is a file a person edits by hand, so `SymbolID.create` refuses a code
 that cannot resolve rather than creating a row that can never quote.
 
+Taiwan is the exception with no Swift to port. It arrived in Pulse for macOS
+0.15.10, after the app stopped being open source, so `TWSEAdapter.js` and the
+`tw`/`two` entries elsewhere reproduce that release's observed behaviour:
+endpoints, field precedence, the three-second pacing, the warrant filter and
+the Korea-then-Taiwan block order. The one deliberate departure is reading
+MIS's nested `trade.z` after `z` and `pz`, because without it most Taiwanese
+rows never get a live price. Keep that comment with the code.
+
 ## JavaScript modules
 
 QML resources declare dependencies with `.import "X.js" as X`, which must be
