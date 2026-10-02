@@ -55,9 +55,27 @@ if [[ ! -e "$watchlist_path" ]]; then
   printf 'Seeded a starter watchlist at %s\n' "$watchlist_path"
 fi
 
+# The rescan is asynchronous: it returns at once, and until the shell has found
+# a newly linked plugin, enabling it answers "unknown" — then "not responding"
+# while the scan runs. A first install therefore retries the enable for up to
+# ten seconds, and says so if it never takes rather than leaving the plugin
+# silently disabled.
 if command -v omarchy-shell >/dev/null 2>&1; then
   omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
-  omarchy plugin enable "$plugin_id" >/dev/null 2>&1 || true
+  enable_interval="${PULSE_ENABLE_INTERVAL:-0.5}"
+  enable_error=""
+  enabled=false
+  for _ in $(seq 1 20); do
+    if enable_error="$(omarchy plugin enable "$plugin_id" 2>&1 >/dev/null)"; then
+      enabled=true
+      break
+    fi
+    sleep "$enable_interval"
+  done
+  if ! $enabled; then
+    printf 'Could not enable %s: %s\n' "$plugin_id" "$enable_error" >&2
+    printf 'Run: omarchy plugin enable %s\n' "$plugin_id" >&2
+  fi
 fi
 
 if $restart_shell; then
