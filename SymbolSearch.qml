@@ -13,10 +13,12 @@ import "Search.js" as Search
 //
 // A code or Chinese text also asks the exchange's own name index, which
 // answers exactly what Yahoo cannot: Yahoo answers 400 to Chinese text, and
-// does not know which Taiwanese board a bare code is on. Its results lead;
-// Each lane is tagged with the query it answered, and only lanes that answered
-// the query now pending are shown, so two queries' answers never mix. Yahoo's
-// faults always speak; its hints speak only when neither lane found anything.
+// does not know which Taiwanese board a bare code is on. The exchange's
+// results lead the merged list. Each lane is tagged with the query it
+// answered, and only lanes that answered the query now pending are shown, so
+// two queries' answers never mix; the previous list stays until a lane has
+// something to show for the new one. Yahoo's faults always speak; its hints
+// speak only when neither lane found anything.
 QtObject {
   id: root
 
@@ -56,14 +58,18 @@ QtObject {
   }
 
   // Both lanes publish through here, so the list and its message always
-  // describe the same answers. Until Yahoo, or the exchange with something to
-  // show, has answered the pending query, the previous complete list stays.
+  // describe the same answers. The previous complete list stays until the
+  // exchange has rows for the pending query, or Yahoo has rows or the exchange
+  // is no longer pending. Yahoo's empty answer to Chinese text, usually first,
+  // must not blank the list while the exchange is still on its way.
   function _publish() {
     var q = root._pendingQuery
     var yahooIn = root._yahooQuery === q
     var twseIn = root._twseQuery === q
     root.searching = root._yahooPending || root._twsePending
-    if (!yahooIn && !(twseIn && root._twseResults.length > 0)) return
+    var yahooShows = yahooIn && (root._yahooResults.length > 0 || !root._twsePending)
+    var twseShows = twseIn && root._twseResults.length > 0
+    if (!yahooShows && !twseShows) return
     root.results = Search.merge([
       twseIn ? root._twseResults : [],
       yahooIn ? root._yahooResults : []

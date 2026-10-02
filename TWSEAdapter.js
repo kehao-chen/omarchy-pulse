@@ -85,9 +85,9 @@ function quoteFromRow(symbol, row, nowMs) {
   // `z` is the last trade in this snapshot and `pz` the one before it; Pulse
   // for macOS reads them in that order and drops the row when both are "-".
   // During the continuous session they are "-" on almost every snapshot of a
-  // stock, and the last trade is only in the nested `trade` object — so there
-  // most Taiwanese rows fall back to Yahoo's delayed price. Reading `trade.z`
-  // last is the one deliberate departure from that release.
+  // stock, and the last trade is only in the nested `trade` object — so in that
+  // release most Taiwanese rows fall back to Yahoo's delayed price. Reading
+  // `trade.z` last is the one deliberate departure from that release.
   var price = positiveNumber(row.z)
   if (price === null) price = positiveNumber(row.pz)
   if (price === null) price = positiveNumber(row.trade && row.trade.z)

@@ -125,7 +125,8 @@ quote, so a typo shows up as a missing row, not a permanently blank one.
 - Each priced row carries the current session's intraday line. It comes from
   the same Yahoo chart response as the quote, so it adds no request or delay.
 - Both Chinese boards share one `CN` badge, both Korean boards share `KR` and
-  both Taiwanese boards share `TW`; which board a symbol sits on is already in its suffix.
+  both Taiwanese boards share `TW`; which board a symbol sits on is already
+  in its suffix.
 - `LIVE` / `LOADING` / `OFFLINE` sits where a refresh button would be. The
   panel either has current prices or says why it does not.
 - `STALE` means a price has stopped arriving **while its market is open**, past
