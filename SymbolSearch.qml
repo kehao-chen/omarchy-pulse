@@ -14,7 +14,9 @@ import "Search.js" as Search
 // A code or Chinese text also asks the exchange's own name index, which
 // answers exactly what Yahoo cannot: Yahoo answers 400 to Chinese text, and
 // does not know which Taiwanese board a bare code is on. Its results lead;
-// Yahoo's message speaks only when neither lane found anything.
+// Each lane is tagged with the query it answered, and only lanes that answered
+// the query now pending are shown, so two queries' answers never mix. Yahoo's
+// faults always speak; its hints speak only when neither lane found anything.
 QtObject {
   id: root
 
@@ -27,7 +29,10 @@ QtObject {
   property string _servedQuery: ""
   property var _yahooResults: []
   property var _twseResults: []
-  property string _yahooMessage: ""
+  property string _yahooQuery: ""
+  property string _twseQuery: ""
+  property string _yahooFault: ""
+  property string _yahooHint: ""
   property bool _yahooPending: false
   property bool _twsePending: false
 
@@ -40,18 +45,32 @@ QtObject {
   function _reset() {
     root._yahooResults = []
     root._twseResults = []
-    root._yahooMessage = ""
+    root._yahooFault = ""
+    root._yahooHint = ""
+    root._yahooQuery = ""
+    root._twseQuery = ""
+    root._pendingQuery = ""
     root._yahooPending = false
     root._twsePending = false
     root._publish()
   }
 
   // Both lanes publish through here, so the list and its message always
-  // describe the same answers.
+  // describe the same answers. Until Yahoo, or the exchange with something to
+  // show, has answered the pending query, the previous complete list stays.
   function _publish() {
-    root.results = Search.merge([root._twseResults, root._yahooResults])
+    var q = root._pendingQuery
+    var yahooIn = root._yahooQuery === q
+    var twseIn = root._twseQuery === q
     root.searching = root._yahooPending || root._twsePending
-    root.message = (root.results.length > 0 || root.searching) ? "" : root._yahooMessage
+    if (!yahooIn && !(twseIn && root._twseResults.length > 0)) return
+    root.results = Search.merge([
+      twseIn ? root._twseResults : [],
+      yahooIn ? root._yahooResults : []
+    ])
+    if (yahooIn && root._yahooFault !== "") root.message = root._yahooFault
+    else if (yahooIn && !root.searching && root.results.length === 0) root.message = root._yahooHint
+    else root.message = ""
   }
 
   function _run(text) {
@@ -63,7 +82,10 @@ QtObject {
     root._pendingQuery = spec.query
 
     var twseSpec = TWSE.searchRequest(spec.query)
-    if (!twseSpec) root._twseResults = []
+    if (!twseSpec) {
+      root._twseResults = []
+      root._twseQuery = spec.query
+    }
     root._twsePending = !!twseSpec
     root._yahooPending = true
     root._publish()
@@ -84,6 +106,9 @@ QtObject {
       if (spec.query !== root._pendingQuery) return
       root._yahooPending = false
       root._servedQuery = spec.query
+      root._yahooQuery = spec.query
+      root._yahooFault = ""
+      root._yahooHint = ""
 
       if (xhr.status === 400) {
         // Yahoo answers 400 to queries its index cannot parse, which includes
@@ -91,13 +116,13 @@ QtObject {
         // fault: a code the user typed still resolves locally, and Taiwanese
         // names come from the exchange's own lane.
         root._yahooResults = Yahoo.parseSearch(null, spec.query)
-        root._yahooMessage = "Yahoo indexes English names and tickers. Try a code, like 600519.SH."
+        root._yahooHint = "Yahoo indexes English names and tickers. Try a code, like 600519.SH."
       } else if (xhr.status === 429) {
         root._yahooResults = Yahoo.parseSearch(null, spec.query)
-        root._yahooMessage = "Rate limited. Try again in a moment."
+        root._yahooFault = "Rate limited. Try again in a moment."
       } else if (xhr.status < 200 || xhr.status >= 300) {
         root._yahooResults = Yahoo.parseSearch(null, spec.query)
-        root._yahooMessage = xhr.status === 0 ? "Offline." : ("Search failed (HTTP " + xhr.status + ").")
+        root._yahooFault = xhr.status === 0 ? "Offline." : ("Search failed (HTTP " + xhr.status + ").")
       } else {
         var parsed = []
         try {
@@ -106,7 +131,7 @@ QtObject {
           parsed = Yahoo.parseSearch(null, spec.query)
         }
         root._yahooResults = parsed
-        root._yahooMessage = "Nothing found for “" + spec.query + "”."
+        root._yahooHint = "Nothing found for “" + spec.query + "”."
       }
       root._publish()
     }
@@ -134,6 +159,7 @@ QtObject {
         }
       }
       root._twseResults = parsed
+      root._twseQuery = query
       root._publish()
     }
     xhr.send()
