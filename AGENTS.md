@@ -71,6 +71,13 @@ batched, at most 50 channels each, at least 3 s apart. They carry no `Referer`
 header — Qt's XHR forbids setting one and MIS answers without it. A closed
 market is not polled after the first pass.
 
+Taiwanese search does not ask MIS at all. MIS's name index answers rtcode
+9999 to any query holding a UTF-8 0x85 byte (元, 光, 全) and takes over ten
+seconds on a broad prefix, so search reads TWSE's and TPEx's daily open-data
+listings instead: two requests on the first search that needs them, kept for
+twelve hours and matched locally, with a failed fetch not retried for a
+minute. Do not move search back to a per-query request.
+
 ## Ordering is the user's
 
 Display order is the schedule's; the persisted order is the user's. The

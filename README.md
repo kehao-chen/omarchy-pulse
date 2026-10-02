@@ -100,7 +100,7 @@ suffix, and no suffix for the US.
 | Tokyo | `.T` | `7203.T` |
 | Korea | `.KS` (KOSPI) / `.KQ` (KOSDAQ) | `005930.KS`, `035720.KQ` |
 | Taiwan | `.TW` (TWSE) / `.TWO` (TPEx) | `2330.TW`, `6488.TWO` |
-| Indices | semantic code or a vendor spelling | `^GSPC`, `SPX`, `INX`, `^HSI`, `N225`, `TAIEX.TW` / `^TWII`, `TPEX.TWO` / `^TWOII` |
+| Indices | semantic code or a vendor spelling | `^GSPC`, `SPX`, `INX`, `^HSI`, `N225`, `TAIEX.TW` / `^TWII`, `TPEX.TWO` / `IX0043.TWO` |
 | Metals | contract code | `GC`, `SI`, `PL`, `PA` |
 
 The Korean board is part of the address and cannot be derived from the code —
@@ -164,9 +164,11 @@ venue — `600519.SH`, `7203.T`, `00700.HK`, `^GSPC` — is resolved locally and
 offered whether or not the index knows it, which matters twice: Yahoo spells
 Shanghai `.SS` rather than `.SH`, and it answers HTTP 400 to Chinese, Japanese
 and Korean queries outright. `茅台` finds nothing there, but `600519.SH` works.
-Taiwanese listings are the exception: TWSE's own index is searched alongside
-Yahoo's, by code or Chinese name (`台積`, `00679`), and its matches are listed
-first, warrants excluded.
+Taiwanese listings are the exception: the TWSE and TPEx daily listings are
+searched alongside Yahoo's index, by code or Chinese name (`台積`, `元大`,
+`00679`), and their matches are listed first, warrants excluded. The listings
+are fetched on the first such search and kept for twelve hours, so a stock that
+listed today is found from the next trading day.
 
 A bare US ticker is left to the index on purpose: `nvidia` is a valid
 ten-character US code as far as the symbol layer is concerned, and offering it
@@ -186,7 +188,8 @@ the regular close rather than yesterday's.
 Taiwanese stocks and ETFs (`2330.TW`, `6488.TWO`) and the TAIEX / TPEx indices
 are quoted live from TWSE Market Info, the exchange's own feed, with Yahoo's
 twenty-minute-delayed quote underneath for charts and whenever the exchange has
-no price. Search finds them by code or Chinese name.
+no price. Search finds them by code or Chinese name. Yahoo keeps no daily
+history for the TPEx index, so its candle chart holds only today's bar.
 
 Delay is per market and is shown in the quote detail: the US is real time,
 Hong Kong and the Chinese boards about fifteen minutes, Tokyo, Seoul and Taipei
