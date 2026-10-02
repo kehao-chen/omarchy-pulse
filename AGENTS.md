@@ -66,6 +66,11 @@ not polled at all. Do not add a parallel fan-out, a shorter floor than the
 15-second clamp in `Watchlist.qml`, or a refresh on a timer faster than the
 source can actually change.
 
+The TWSE lane has its own rule and its own queue and timer: requests are
+batched, at most 50 channels each, at least 3 s apart. They carry no `Referer`
+header — Qt's XHR forbids setting one and MIS answers without it. A closed
+market is not polled after the first pass.
+
 ## Ordering is the user's
 
 Display order is the schedule's; the persisted order is the user's. The
