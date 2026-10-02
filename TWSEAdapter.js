@@ -3,8 +3,9 @@
 // There is no PulseCore source to port here. Taiwan arrived in Pulse for macOS
 // 0.15.10, after the app stopped being open source, so what follows is that
 // release's behaviour as observed — endpoints, field precedence, pacing and
-// the search filter — re-expressed, with the one departure marked where it
-// happens.
+// the search filter — re-expressed, with the two departures marked where they
+// happen: the nested trade price, and search reading the exchanges' daily
+// files rather than MIS's name index.
 //
 // Unlike Yahoo, one request carries many symbols, so this source is batched.
 // It quotes both Taiwanese boards and their two benchmark indices and has no
@@ -17,7 +18,6 @@
 var ID = "twse"
 var NAME = "TWSE Market Info"
 var QUOTE_URL = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
-var NAMES_URL = "https://mis.twse.com.tw/stock/api/getStockNames.jsp"
 
 var MARKETS = ["tw", "two"]
 
@@ -143,54 +143,96 @@ function parseQuotes(symbols, payload, nowMs) {
 }
 
 // --- Search ---------------------------------------------------------------
+//
+// Search reads the two exchanges' daily open-data files and matches locally.
+// This is the second departure from Pulse for macOS 0.15.10, which asks MIS's
+// own name index (getStockNames.jsp) per query. That index cannot serve it:
+// it answers rtcode 9999 to any query whose UTF-8 holds a 0x85 byte — 元, 光,
+// 全 and about one CJK character in thirty-two — so 元大 finds nothing, and a
+// broad prefix such as 富邦 lists every warrant on it and takes longer than
+// ten seconds. The files are the previous trading day's listings, so a stock
+// listed today is found tomorrow; Yahoo's direct match covers it until then.
+
+var NAME_LISTS = [
+  { market: "tw", url: "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
+    codeKey: "Code", nameKey: "Name" },
+  { market: "two", url: "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
+    codeKey: "SecuritiesCompanyCode", nameKey: "CompanyName" }
+]
 
 var SEARCH_LIMIT = 12
-var BOARD_FROM_PREFIX = { tse: "tw", otc: "two" }
 var EXCHANGE_NAMES = { tw: "TWSE", two: "TPEx" }
 
-// The exchange's name index answers codes and Chinese names, which is exactly
-// what Yahoo cannot: it answers 400 to Chinese text. A full symbol such as
-// `2330.TW` is not asked here, because Yahoo's direct match already resolves it.
-function wantsSearch(text) {
-  return /^\d{2,6}[A-Za-z]?$/.test(text) || /[㐀-鿿豈-﫿]/.test(text)
-}
-
-function searchRequest(query) {
+// The exchanges answer codes and Chinese names, which is exactly what Yahoo
+// cannot: it answers 400 to Chinese text. A full symbol such as `2330.TW` is
+// left to Yahoo's direct match, which already resolves it.
+function searchable(query) {
   var text = trimmed(query)
-  if (!text || !wantsSearch(text)) return null
-  return { url: NAMES_URL + "?n=" + encodeURIComponent(text) + "&lang=zh_tw", query: text }
+  if (!text) return null
+  return (/^\d{2,6}[A-Za-z]?$/.test(text) || /[\u3400-\u9fff\uf900-\ufaff]/.test(text)) ? text : null
 }
 
-function parseSearch(payload) {
-  var items = payload && payload.datas
-  if (!items || typeof items.length !== "number") return []
-  var results = []
+// One board's file, as search entries in the file's order.
+function parseNameList(market, payload) {
+  var list = null
+  for (var l = 0; l < NAME_LISTS.length; l++) {
+    if (NAME_LISTS[l].market === market) list = NAME_LISTS[l]
+  }
+  if (!list || !payload || typeof payload.length !== "number") return []
+  var entries = []
   var seen = {}
-  for (var i = 0; i < items.length && results.length < SEARCH_LIMIT; i++) {
-    var item = items[i] || {}
-    var code = trimmed(item.c).toUpperCase()
+  for (var i = 0; i < payload.length; i++) {
+    var row = payload[i] || {}
+    var code = trimmed(row[list.codeKey]).toUpperCase()
     // Six characters and up is where warrants live (03002T, 701064). Pulse
     // for macOS keeps only the ETFs there, and every ETF code starts with 00.
     if (code.length >= 6 && code.indexOf("00") !== 0) continue
-    // The key says the board: `tse_2330.tw_20261002` or `otc_6488.tw_…`.
-    var market = BOARD_FROM_PREFIX[String(item.key || "").split("_")[0].toLowerCase()]
-    if (!market) continue
     var symbol = SymbolID.create(market, code)
     if (!symbol) continue
     var key = SymbolID.toString(symbol)
     if (seen[key]) continue
     seen[key] = true
-    results.push({
+    entries.push({
       key: key,
       symbol: symbol,
       displayCode: SymbolID.displayCode(symbol),
       market: market,
-      name: trimmed(item.n) || key,
+      name: trimmed(row[list.nameKey]) || key,
       exchangeName: EXCHANGE_NAMES[market],
       type: code.indexOf("00") === 0 ? "etf" : "equity"
     })
   }
-  return results
+  return entries
+}
+
+// Shorter codes first, so a stock (2881) leads its issuer's ETFs (00405A):
+// the exchanges list ETFs first, and 富邦 would otherwise fill the page with
+// Fubon's funds before 富邦金.
+function byCode(a, b) {
+  if (a.displayCode.length !== b.displayCode.length) return a.displayCode.length - b.displayCode.length
+  return a.displayCode < b.displayCode ? -1 : (a.displayCode > b.displayCode ? 1 : 0)
+}
+
+// An exact code first, then codes that start with the query, then names that
+// start with it, then names that hold it anywhere; by code within each.
+function searchNames(entries, query) {
+  var text = trimmed(query).toUpperCase()
+  if (!text || !entries || typeof entries.length !== "number") return []
+  var ranked = [[], [], [], []]
+  for (var i = 0; i < entries.length; i++) {
+    var entry = entries[i]
+    var code = entry.displayCode.toUpperCase()
+    var at = String(entry.name).toUpperCase().indexOf(text)
+    if (code === text) ranked[0].push(entry)
+    else if (code.indexOf(text) === 0) ranked[1].push(entry)
+    else if (at === 0) ranked[2].push(entry)
+    else if (at > 0) ranked[3].push(entry)
+  }
+  var out = []
+  for (var r = 0; r < ranked.length && out.length < SEARCH_LIMIT; r++) {
+    out = out.concat(ranked[r].sort(byCode))
+  }
+  return out.slice(0, SEARCH_LIMIT)
 }
 
 if (typeof module !== "undefined") module.exports = {
@@ -202,6 +244,8 @@ if (typeof module !== "undefined") module.exports = {
   batches: batches,
   requestFor: requestFor,
   parseQuotes: parseQuotes,
-  searchRequest: searchRequest,
-  parseSearch: parseSearch
+  NAME_LISTS: NAME_LISTS,
+  searchable: searchable,
+  parseNameList: parseNameList,
+  searchNames: searchNames
 }

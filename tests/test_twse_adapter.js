@@ -86,23 +86,82 @@ test("missing reference fields fall back rather than invent", () => {
 })
 
 test("search runs for codes and Chinese text, not for English words", () => {
-  assert.equal(TWSE.searchRequest("2330").url,
-    "https://mis.twse.com.tw/stock/api/getStockNames.jsp?n=2330&lang=zh_tw")
-  assert.equal(TWSE.searchRequest("00679b").query, "00679b")
-  assert.ok(TWSE.searchRequest("台積"))
-  assert.equal(TWSE.searchRequest("nvidia"), null)
-  assert.equal(TWSE.searchRequest("2330.TW"), null) // a full symbol is Yahoo's direct match
-  assert.equal(TWSE.searchRequest("  "), null)
+  assert.equal(TWSE.searchable("2330"), "2330")
+  assert.equal(TWSE.searchable(" 00679b "), "00679b")
+  assert.equal(TWSE.searchable("台積"), "台積")
+  assert.equal(TWSE.searchable("nvidia"), null)
+  assert.equal(TWSE.searchable("2330.TW"), null) // a full symbol is Yahoo's direct match
+  assert.equal(TWSE.searchable("  "), null)
 })
 
-test("search keeps stocks and ETFs on the right board and drops warrants", () => {
-  const results = TWSE.parseSearch(fixture("twse_names.json"))
-  assert.deepEqual(results.map((r) => r.key), ["2330.TW", "00679B.TWO", "006208.TW", "6488.TWO"])
-  assert.equal(results[0].name, "台積電")
-  assert.equal(results[0].exchangeName, "TWSE")
-  assert.equal(results[0].type, "equity")
-  assert.equal(results[1].exchangeName, "TPEx")
-  assert.equal(results[1].type, "etf")
-  assert.equal(results[1].market, "two")
-  assert.deepEqual(TWSE.parseSearch(null), [])
+test("the name lists are the two exchanges' daily open-data files", () => {
+  assert.deepEqual(TWSE.NAME_LISTS.map((list) => [list.market, list.url]), [
+    ["tw", "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"],
+    ["two", "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"]
+  ])
+})
+
+function nameIndex() {
+  return TWSE.parseNameList("tw", fixture("twse_stock_day_all.json"))
+    .concat(TWSE.parseNameList("two", fixture("tpex_daily_close.json")))
+}
+
+test("a name list keeps stocks and ETFs on their board and drops warrants and ETNs", () => {
+  const entries = nameIndex()
+  assert.deepEqual(entries.map((e) => e.key), [
+    "2330.TW", "0050.TW", "00631L.TW", "006208.TW", "2301.TW", "1101B.TW",
+    "6488.TWO", "00679B.TWO", "8069.TWO"
+  ])
+  const [tsmc] = entries
+  assert.equal(tsmc.name, "台積電")
+  assert.equal(tsmc.displayCode, "2330")
+  assert.equal(tsmc.market, "tw")
+  assert.equal(tsmc.exchangeName, "TWSE")
+  assert.equal(tsmc.type, "equity")
+  const bond = entries.find((e) => e.key === "00679B.TWO")
+  assert.equal(bond.exchangeName, "TPEx")
+  assert.equal(bond.type, "etf")
+  assert.equal(entries.find((e) => e.key === "2301.TW").name, "光寶科")
+  assert.deepEqual(TWSE.parseNameList("tw", null), [])
+  assert.deepEqual(TWSE.parseNameList("tw", { rtcode: "9999" }), [])
+  assert.deepEqual(TWSE.parseNameList("us", fixture("twse_stock_day_all.json")), [])
+})
+
+test("a Chinese name is found anywhere in it, whatever its bytes", () => {
+  const entries = nameIndex()
+  // 元 and 光 are UTF-8 E5 85 xx. MIS's own name index answers 9999 to any
+  // query holding a 0x85 byte, which is why it is not asked.
+  assert.deepEqual(TWSE.searchNames(entries, "元大").map((r) => r.key),
+    ["0050.TW", "00631L.TW", "00679B.TWO"])
+  assert.deepEqual(TWSE.searchNames(entries, "光寶").map((r) => r.key), ["2301.TW"])
+  assert.deepEqual(TWSE.searchNames(entries, "台50").map((r) => r.key), ["006208.TW"])
+  assert.deepEqual(TWSE.searchNames(entries, "台灣50").map((r) => r.key), ["0050.TW", "00631L.TW"])
+})
+
+test("a code match leads, exact before prefix, then names, by code within each", () => {
+  const entries = nameIndex()
+  assert.deepEqual(TWSE.searchNames(entries, "0050").map((r) => r.key), ["0050.TW"])
+  assert.deepEqual(TWSE.searchNames(entries, "00679b").map((r) => r.key), ["00679B.TWO"])
+  assert.deepEqual(TWSE.searchNames(entries, "006").map((r) => r.key), ["006208.TW", "00631L.TW", "00679B.TWO"])
+  // "50" is no code's prefix here, but it is in three names.
+  assert.deepEqual(TWSE.searchNames(entries, "50").map((r) => r.key), ["0050.TW", "006208.TW", "00631L.TW"])
+  assert.deepEqual(TWSE.searchNames(entries, "  "), [])
+  assert.deepEqual(TWSE.searchNames(null, "2330"), [])
+})
+
+test("a name that starts with the query leads one that only holds it, and a stock leads an ETF", () => {
+  const entries = nameIndex()
+  // The exchanges list ETFs first. Without this, 富邦 would fill the page with
+  // Fubon's ETFs before 富邦金 itself.
+  assert.deepEqual(TWSE.searchNames(entries, "台").map((r) => r.key),
+    ["2330.TW", "1101B.TW", "0050.TW", "006208.TW", "00631L.TW"])
+})
+
+test("search stops at the result limit", () => {
+  const entries = []
+  for (let i = 0; i < 40; i++) {
+    entries.push(...TWSE.parseNameList("tw", [{ Code: String(1100 + i), Name: "測試" + i }]))
+  }
+  assert.equal(TWSE.searchNames(entries, "測試").length, 12)
+  assert.deepEqual(TWSE.searchNames(entries, "11").slice(0, 2).map((r) => r.key), ["1100.TW", "1101.TW"])
 })
