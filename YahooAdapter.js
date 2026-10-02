@@ -36,13 +36,16 @@ var DESCRIPTOR = {
   suggestedPollIntervalMs: 60000
 }
 
+// The TPEx index is the one Yahoo does not spell with a caret: `^TWOII` is a
+// 404, and Yahoo lists it as IX0043.TWO. That symbol carries today's intraday
+// bars but no daily history, so its candle chart holds a single bar.
 var INDEX_WIRE = {
   sp500: "^GSPC", nasdaqComposite: "^IXIC", dowJonesIndustrial: "^DJI",
   nasdaq100: "^NDX", vix: "^VIX", russell1000: "^RUI", russell2000: "^RUT",
   hangSeng: "^HSI", hangSengTech: "^HSTECH",
   shanghaiComposite: "000001.SS", shenzhenComponent: "399001.SZ", chiNext: "399006.SZ",
   nikkei225: "^N225", kospi: "^KS11",
-  taiex: "^TWII", tpex: "^TWOII"
+  taiex: "^TWII", tpex: "IX0043.TWO"
 }
 
 var SUFFIX = { hk: ".HK", sh: ".SS", sz: ".SZ", jp: ".T", kr: ".KS", kq: ".KQ", tw: ".TW", two: ".TWO" }

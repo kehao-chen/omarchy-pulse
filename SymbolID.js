@@ -72,7 +72,7 @@ var INDEX_ALIASES = {
   nikkei225:          ["N225", "NKY"],
   kospi:              ["KOSPI", "KS11"],
   taiex:              ["TAIEX", "TWII"],
-  tpex:               ["TPEX", "TWOII"]
+  tpex:               ["TPEX", "TWOII", "IX0043"]
 }
 
 // A market suffix already consumed by `parse` may still be present when a code

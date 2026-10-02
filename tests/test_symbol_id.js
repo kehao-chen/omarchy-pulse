@@ -90,7 +90,7 @@ test("TAIEX and the TPEx index resolve from every spelling", () => {
     assert.equal(symbol.id, "taiex", raw)
     assert.equal(symbol.market, "tw", raw)
   }
-  for (const raw of ["^TWOII", "TWOII", "TPEX", "TPEX.TWO"]) {
+  for (const raw of ["^TWOII", "TWOII", "TPEX", "TPEX.TWO", "IX0043.TWO"]) {
     const symbol = SymbolID.parse(raw)
     assert.equal(symbol.id, "tpex", raw)
     assert.equal(symbol.market, "two", raw)
