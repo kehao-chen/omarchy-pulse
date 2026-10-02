@@ -20,8 +20,8 @@ import "TWSEAdapter.js" as TWSE
 //
 // Taiwanese rows ride two lanes. Yahoo's queue quotes them like any other
 // market — that is their intraday line and their price whenever the exchange
-// has none — and a second, batched lane asks TWSE for every one of them in a
-// single request, three seconds apart per batch. The panel's model merges the
+// has none — and a second, batched lane asks TWSE for them in batches of up to
+// fifty, at least three seconds apart. The panel's model merges the
 // two, so the live price wins without the delayed one ever rolling it back.
 QtObject {
   id: root
@@ -139,18 +139,20 @@ QtObject {
 
   function _drainTwse() {
     if (root._twseDraining || !root.active || root._twseQueue.length === 0) return
+    if (twseSpacing.running) return
     root._twseDraining = true
     root._requestTwse(root._twseQueue.shift())
   }
 
   function _finishTwse() {
     root._twseDraining = false
-    if (root._twseQueue.length > 0) twseSpacing.restart()
+    twseSpacing.restart()
   }
 
   // A miss on this lane is not a failure. Yahoo quotes every Taiwanese row
   // too, and whether a row shows an error is that lane's call; this one only
-  // ever improves a price.
+  // ever improves a price. A miss is seeded all the same, so a row the exchange
+  // never prices is not asked again every poll after the close.
   function _requestTwse(batch) {
     var spec = TWSE.requestFor(batch)
     if (!spec) { root._finishTwse(); return }
@@ -169,8 +171,8 @@ QtObject {
         } catch (e) {
           quotes = []
         }
+        for (var j = 0; j < batch.length; j++) root._twseSeeded[root._key(batch[j])] = true
         for (var i = 0; i < quotes.length; i++) {
-          root._twseSeeded[quotes[i].symbol] = true
           root.completed = root.completed + 1
           root.lastCompletedMs = Date.now()
           root.quoteReceived(quotes[i])
